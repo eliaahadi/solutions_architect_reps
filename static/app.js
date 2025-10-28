@@ -1,15 +1,19 @@
-\
+"use strict";
+
 let idx = 0;
 let score = 0;
-const total = 10;
 
+// Expect ITEMS and SESSION_ID to be defined by the template.
 const stage = document.getElementById('stage');
-const progress = document.getElementById('progress');
+const progressEl = document.getElementById('progress');
 const nextBtn = document.getElementById('nextBtn');
 const prevBtn = document.getElementById('prevBtn');
 
+const total = Array.isArray(ITEMS) ? ITEMS.length : 10;
+
 function updateProgress() {
-  progress.textContent = `${Math.min(idx+1, total)} / ${total}`;
+  const cur = Math.min(idx + 1, total);
+  progressEl.textContent = `${cur} / ${total}`;
   prevBtn.disabled = idx === 0;
   nextBtn.textContent = (idx === total - 1) ? 'Finish' : 'Next';
 }
@@ -20,20 +24,20 @@ function saveAttempt(item, correct, responseText="") {
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
       session_id: SESSION_ID,
-      item_id: item.id || `${item.type}-${Math.random().toString(36).slice(2,7)}`,
-      item_type: item.type || inferType(item),
+      item_id: item.id || `${inferType(item)}-${Math.random().toString(36).slice(2,7)}`,
+      item_type: inferType(item),
       correct: correct ? 1 : 0,
       response: responseText
     })
-  }).then(()=>{}).catch(()=>{});
+  }).catch(()=>{});
   if (correct) score++;
 }
 
 function inferType(item){
-  if (item.front && item.back) return 'flash';
-  if (item.question && item.options) return 'tradeoff';
-  if (item.prompt && item.id && item.id.startsWith('w')) return 'whiteboard';
-  if (item.prompt && item.id && item.id.startsWith('b')) return 'behavioral';
+  if (item && item.front && item.back) return 'flash';
+  if (item && item.question && item.options) return 'tradeoff';
+  if (item && item.id && String(item.id).startsWith('w')) return 'whiteboard';
+  if (item && item.id && String(item.id).startsWith('b')) return 'behavioral';
   return 'other';
 }
 
@@ -62,8 +66,8 @@ function flashcard(item) {
   const gotit = stage.querySelector('#gotit');
   const missed = stage.querySelector('#missed');
   reveal.onclick = () => card.classList.add('flip');
-  gotit && (gotit.onclick = () => { saveAttempt(item, true); next(); });
-  missed && (missed.onclick = () => { saveAttempt(item, false); next(); });
+  if (gotit) gotit.onclick = () => { saveAttempt(item, true); next(); };
+  if (missed) missed.onclick = () => { saveAttempt(item, false); next(); };
 }
 
 function tradeoff(item) {
@@ -127,16 +131,14 @@ function behavioral(item) {
   };
 }
 
-function updateProgress() {
-  progress.textContent = `${Math.min(idx+1, total)} / ${total}`;
-  prevBtn.disabled = idx === 0;
-  nextBtn.textContent = (idx === total - 1) ? 'Finish' : 'Next';
-}
-
 function render() {
   updateProgress();
   const item = ITEMS[idx];
-  const type = item.type || (item.front ? 'flash' : (item.question ? 'tradeoff' : (item.id?.startsWith('w') ? 'whiteboard' : 'behavioral')));
+  const id = (item && item.id) ? String(item.id) : '';
+  const type = item.type ||
+    (item.front && item.back ? 'flash' :
+      (item.question && item.options ? 'tradeoff' :
+        (id.startsWith('w') ? 'whiteboard' : 'behavioral')));
   if (type === 'flash') return flashcard(item);
   if (type === 'tradeoff') return tradeoff(item);
   if (type === 'whiteboard') return whiteboard(item);
@@ -149,7 +151,11 @@ function next() {
     idx++;
     render();
   } else {
-    fetch('/complete', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: SESSION_ID})});
+    fetch('/complete', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id: SESSION_ID})
+    });
     stage.innerHTML = `
       <div class="p-6 rounded-2xl border border-slate-200 bg-white text-center">
         <h3 class="text-xl font-semibold mb-2">Nice work 🎯</h3>
@@ -169,15 +175,11 @@ function prev() {
   }
 }
 
-const progress = document.getElementById('progress');
-const nextBtn = document.getElementById('nextBtn');
-const prevBtn = document.getElementById('prevBtn');
-const stage = document.getElementById('stage');
-
 nextBtn.onclick = () => {
   idx = Math.min(idx + 1, total - 1);
   render();
 };
 prevBtn.onclick = prev;
 
+// First paint
 render();
