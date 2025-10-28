@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="bg-white rounded-2xl shadow p-0 overflow-hidden">
+    <div class="px-4 py-3 bg-sky-50 border-b border-slate-200 flex items-center justify-between">
+      <div class="text-sm text-slate-700">Profile code: <span class="font-mono font-semibold">{{ profile_code }}</span></div>
+      <div id="progress" class="text-sm text-slate-700">0 / 10</div>
+    </div>
+    <div id="stage" class="p-4"></div>
+    <div class="px-4 py-3 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+      <button id="prevBtn" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 disabled:opacity-40" disabled>Back</button>
+      <button id="nextBtn" class="px-4 py-2 rounded-xl bg-sky-600 text-white">Next</button>
+    </div>
+  </div>
+  <script>
+    const ITEMS = {{ items|safe }};
+    const SESSION_ID = {{ session_id }};
+  </script>
+  <script src="/static/app.js"></script>
+{% endblock %}

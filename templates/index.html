@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="bg-white rounded-2xl shadow p-6">
+    <h1 class="text-2xl font-semibold mb-2">Your 7-minute daily drill</h1>
+    <p class="text-slate-600 mb-6">5 flash cards, 3 tradeoff picks, 1 whiteboard prompt, 1 behavioral prompt. Track streaks and tighten your explanations.</p>
+    <div class="flex gap-3">
+      <a href="/daily" class="px-4 py-2 rounded-xl bg-sky-600 text-white font-medium">Start today’s reps</a>
+      <a href="/settings" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700">Settings</a>
+    </div>
+    <div class="mt-6 text-sm text-slate-600">
+      <p><strong>Profile code:</strong> <span id="profileCode">(appears on Daily page)</span></p>
+      <p class="mt-1">Use the same code in Settings on your iPhone to sync progress.</p>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{
+  "flashcards": [
+    {
+      "id": "f1",
+      "front": "NACL vs Security Group \u2014 key differences?",
+      "back": "NACL: stateless, subnet level, numbered rules, separate inbound/outbound. SG: stateful, attached to ENI, implicit deny, evaluates as a set."
+    },
+    {
+      "id": "f2",
+      "front": "When choose NLB over ALB?",
+      "back": "Layer 4, extreme perf, static IP/Elastic IPs, TLS passthrough, non-HTTP protocols. ALB for L7 features (path host rules, WAF at L7, websockets, OIDC)."
+    },
+    {
+      "id": "f3",
+      "front": "DynamoDB global read scaling pattern",
+      "back": "Use Global Tables, per-region stacks, Route 53 latency routing, handle last-writer-wins or custom conflict logic."
+    },
+    {
+      "id": "f4",
+      "front": "Least-ops S3 encryption",
+      "back": "SSE-S3 default bucket encryption; if key control/audit needed, SSE-KMS with proper key policy and grants."
+    },
+    {
+      "id": "f5",
+      "front": "Three private cross-account access options",
+      "back": "AWS PrivateLink (NLB), VPC peering, Transit Gateway. PrivateLink scales well and avoids routing complexity."
+    },
+    {
+      "id": "f6",
+      "front": "Blue/green vs canary deploys",
+      "back": "Blue/green = two environments + switch. Canary = gradual traffic shift on same env. Canary is cheaper, blue/green safer for big changes."
+    },
+    {
+      "id": "f7",
+      "front": "Idempotency patterns for serverless",
+      "back": "Client tokens, DynamoDB conditional writes, SQS FIFO dedup, Step Functions retries with jitter/backoff."
+    },
+    {
+      "id": "f8",
+      "front": "RTO vs RPO",
+      "back": "RTO: time to restore service. RPO: acceptable data loss window."
+    },
+    {
+      "id": "f9",
+      "front": "Protecting a public ALB",
+      "back": "WAF, AWS Shield, SG/NACL hygiene, restrict via CloudFront if possible, health checks, access logs."
+    },
+    {
+      "id": "f10",
+      "front": "Cache patterns to know",
+      "back": "Cache-aside, write-through, write-back. Think TTLs, invalidation, hot keys, and eviction policy."
+    },
+    {
+      "id": "f11",
+      "front": "SQS vs SNS vs EventBridge (when to pick)",
+      "back": "SQS for decoupling + retries, SNS for pub/sub fanout, EventBridge for routing, filtering, SaaS events + schema registry."
+    },
+    {
+      "id": "f12",
+      "front": "Aurora vs RDS vs DynamoDB fit",
+      "back": "Aurora for high throughput MySQL/Postgres needs, RDS for managed relational basics, DynamoDB for massive scale/NoSQL."
+    },
+    {
+      "id": "f13",
+      "front": "ECS Fargate vs EKS vs Lambda",
+      "back": "Lambda for event-driven/orders of bursts; Fargate for simpler containers; EKS for Kubernetes control and ecosystem."
+    },
+    {
+      "id": "f14",
+      "front": "CloudFront edge vs API Gateway Regional",
+      "back": "CloudFront for caching, TLS, WAF at edge; Regional API when you need L7 API features per region; use together often."
+    },
+    {
+      "id": "f15",
+      "front": "MSK vs Kinesis Data Streams",
+      "back": "MSK (Kafka) if Kafka compatibility and control are key; Kinesis for managed scaling, simpler ops, deep AWS integrations."
+    }
+  ],
+  "tradeoffs": [
+    {
+      "id": "t1",
+      "question": "Pick for 10M req/day HTTP app needing L7 routing & auth integration",
+      "options": [
+        "NLB",
+        "ALB",
+        "Gateway Load Balancer"
+      ],
+      "answer": 1,
+      "explain": "ALB gives path/host-based routing, OIDC/Cognito integration, WebSocket/HTTP2."
+    },
+    {
+      "id": "t2",
+      "question": "Private cross-account service w/ minimal routing complexity",
+      "options": [
+        "VPC peering",
+        "Transit Gateway",
+        "PrivateLink"
+      ],
+      "answer": 2,
+      "explain": "PrivateLink publishes an endpoint service behind NLB; consumers connect via Interface Endpoints."
+    },
+    {
+      "id": "t3",
+      "question": "Event ingestion with variable throughput, low ops",
+      "options": [
+        "MSK",
+        "Kinesis Data Streams",
+        "DIY on EC2"
+      ],
+      "answer": 1,
+      "explain": "Kinesis scales shards, integrates with Lambda/Firehose, minimal ops compared to MSK/EC2."
+    },
+    {
+      "id": "t4",
+      "question": "Best cache update policy for read-heavy with occasional writes",
+      "options": [
+        "Write-through",
+        "Write-back",
+        "Cache-aside"
+      ],
+      "answer": 2,
+      "explain": "Cache-aside keeps DB as source of truth; app loads into cache on miss and invalidates on write."
+    },
+    {
+      "id": "t5",
+      "question": "Edge security for public APIs",
+      "options": [
+        "WAF on CloudFront",
+        "NACLs only",
+        "Route 53 only"
+      ],
+      "answer": 0,
+      "explain": "CloudFront + WAF adds managed rules, bot control, geo, rate limiting at the edge."
+    }
+  ],
+  "whiteboard": [
+    {
+      "id": "w1",
+      "prompt": "Draw/describe a highly available web tier across two AZs with RDS read replica and CloudFront. Mention health checks, subnets, and failover."
+    },
+    {
+      "id": "w2",
+      "prompt": "Sketch an ingestion path for IoT telemetry (50k devices) to real-time dashboards and cold storage with retries and backpressure."
+    },
+    {
+      "id": "w3",
+      "prompt": "Outline a HIPAA-ready API design with PHI encryption, private access, logging/audit, and regional isolation."
+    }
+  ],
+  "behavioral": [
+    {
+      "id": "b1",
+      "prompt": "Tell me about a time you disagreed with a senior engineer on architecture. Use STAR and end with impact/metrics."
+    },
+    {
+      "id": "b2",
+      "prompt": "Describe a high-pressure incident you led. Focus on triage, comms, and postmortem improvements with metrics."
+    },
+    {
+      "id": "b3",
+      "prompt": "When did you change a design after new constraints? Show tradeoffs and stakeholder alignment."
+    }
+  ]
+}
