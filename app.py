@@ -1,11 +1,60 @@
 import json, os, sqlite3, secrets, datetime, random
-from flask import Flask, request, make_response, render_template, jsonify, redirect, url_for
+from flask import Flask, request, Response, make_response, render_template, jsonify, redirect, url_for
+import datetime as _dt
+app = Flask(__name__)
+
+# --- PATCH START --- add streak helpers + updated index + favicon ---
+
+def _get_completed_days(profile_code):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT session_date FROM sessions WHERE profile_code=? AND completed=1", (profile_code,))
+    rows = [r[0] for r in cur.fetchall()]
+    days = set()
+    for s in rows:
+        try:
+            days.add(_dt.date.fromisoformat(s))
+        except Exception:
+            pass
+    return days
+
+def compute_streaks(profile_code):
+    """Return (current_streak, best_streak) based on completed sessions."""
+    days = sorted(list(_get_completed_days(profile_code)))
+    dayset = set(days)
+    # current streak: count back from today
+    cur = 0
+    d = _dt.date.today()
+    while d in dayset:
+        cur += 1
+        d = d - _dt.timedelta(days=1)
+    # best streak: scan ascending
+    best = 0
+    run = 0
+    prev = None
+    for d in days:
+        if prev is None or d == prev + _dt.timedelta(days=1):
+            run += 1
+        else:
+            best = max(best, run)
+            run = 1
+        prev = d
+    best = max(best, run)
+    return cur, best
+
+@app.route("/favicon.ico")
+def favicon():
+    # tiny 1x1 transparent gif to quiet 404s
+    data = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x01\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+    return Response(data, mimetype="image/gif")
+
+
+# --- PATCH END ---
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(APP_DIR, "sa_reps.sqlite3")
 SEED_PATH = os.path.join(APP_DIR, "seed_content.json")
 
-app = Flask(__name__)
 
 def get_db():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -109,6 +158,12 @@ def ensure_session(profile_code):
 def index():
     resp = make_response(render_template("index.html"))
     code, resp = ensure_profile(resp)
+    # Create response so we can attach the cookie if needed, then render with streaks
+    # resp = make_response()
+    # code, resp = ensure_profile(resp)
+    cur_streak, best_streak = compute_streaks(code)
+    html = render_template("index.html", streak_current=cur_streak, streak_best=best_streak)
+    resp.set_data(html)
     return resp
 
 @app.route("/settings", methods=["GET", "POST"])

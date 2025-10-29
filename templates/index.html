@@ -12,4 +12,60 @@
       <p class="mt-1">Use the same code in Settings on your iPhone to sync progress.</p>
     </div>
   </div>
+  <!-- PATCH START: add streaks card -->
+    <div class="mt-6 bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-semibold mb-2">Streaks</h2>
+      <p class="text-slate-600 text-sm mb-3">
+        Current: <span class="font-semibold"><span id="streak-current">{{ streak_current or 0 }}</span> days</span> ·
+        Best: <span class="font-semibold" id="streak-best">{{ streak_best or 0 }}</span>
+      </p>
+      {% set denom = (streak_best if (streak_best or 0) > 0 else 7) %}
+      {% set pct = ( (streak_current or 0) * 100 // denom ) if denom>0 else 0 %}
+      <div class="h-3 bg-slate-200 rounded-full overflow-hidden">
+        <div id="streak-bar" class="h-3 bg-amber-500" style="width: {{ (100 if pct>100 else pct) }}%"></div>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">Bar scales against your best (or 7-day goal until you set one).</p>
+    </div>
+  <!-- PATCH END -->
+<script>
+(function(){
+  function ensureProfileCode(){
+    let code = window.localStorage.getItem('profile_code');
+    if(!code){
+      code = 'LOCAL-' + Math.random().toString(36).slice(2,8).toUpperCase();
+      window.localStorage.setItem('profile_code', code);
+    }
+    return code;
+  }
+  function showProfileCode(){
+    const el = document.getElementById('profileCode');
+    if(el){ el.textContent = ensureProfileCode(); }
+  }
+  async function refreshStreaks(){
+    const code = ensureProfileCode();
+    const tz = new Date().getTimezoneOffset();
+    try{
+      const res = await fetch(`/api/stats?profile_code=${encodeURIComponent(code)}&tz_offset_min=${tz}`);
+      const s = await res.json();
+      if(!res.ok || s.error){ return; }
+      const current = s.current_streak || 0;
+      const best = s.best_streak || 0;
+      const denom = Math.max(best, 7);
+      const pct = Math.min(100, Math.round(100 * current / denom));
+      const curEl = document.getElementById('streak-current');
+      const bestEl = document.getElementById('streak-best');
+      const barEl = document.getElementById('streak-bar');
+      if(curEl) curEl.textContent = current;
+      if(bestEl) bestEl.textContent = best;
+      if(barEl) barEl.style.width = pct + '%';
+    } catch(e){
+      // ignore network errors silently for now
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    showProfileCode();
+    refreshStreaks();
+  });
+})();
+</script>
 {% endblock %}
