@@ -1,0 +1,6 @@
+/* Subtle card flip styles for flashcards */
+.flipcard { perspective: 1000px; }
+.flipcard-inner { position: relative; transition: transform 0.6s; transform-style: preserve-3d; }
+.flipcard.flip .flipcard-inner { transform: rotateY(180deg); }
+.flipcard-face { position: relative; backface-visibility: hidden; }
+.flipcard-back { transform: rotateY(180deg); }
