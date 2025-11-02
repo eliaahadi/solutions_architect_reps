@@ -1,4 +1,4 @@
-import json, os, sqlite3, secrets, datetime, random
+import copy, json, os, sqlite3, secrets, datetime, random
 from flask import Flask, request, Response, make_response, render_template, jsonify, redirect, url_for
 import datetime as _dt
 app = Flask(__name__)
@@ -125,17 +125,53 @@ def ensure_profile(resp=None):
     return code, resp
 
 def sample_daily_items():
-    # 5 flashcards, 3 tradeoffs, 1 whiteboard, 1 behavioral
-    f = random.sample(SEED["flashcards"], k=min(5, len(SEED["flashcards"])))
-    t = random.sample(SEED["tradeoffs"], k=min(3, len(SEED["tradeoffs"])))
-    w = random.sample(SEED["whiteboard"], k=1)
-    b = random.sample(SEED["behavioral"], k=1)
-    # annotate type for rendering
-    for x in f: x["type"] = "flash"
-    for x in t: x["type"] = "tradeoff"
-    for x in w: x["type"] = "whiteboard"
-    for x in b: x["type"] = "behavioral"
-    return f + t + w + b
+    """Sample the 10 daily prompts, recycling items if the seed list is short."""
+    used_ids = set()
+
+    def _clone(item, label, force_new=False):
+        clone = copy.deepcopy(item)
+        base_id = (clone.get("id") or f"{label}-item").split("#")[0]
+        new_id = base_id
+        if force_new or new_id in used_ids:
+            while True:
+                new_id = f"{base_id}#{secrets.token_hex(2).upper()}"
+                if new_id not in used_ids:
+                    break
+        clone["id"] = new_id
+        clone["type"] = label
+        used_ids.add(new_id)
+        return clone
+
+    def _take(key, count, label):
+        pool = list(SEED.get(key) or [])
+        picked = []
+        if pool:
+            take = min(count, len(pool))
+            for item in random.sample(pool, k=take):
+                picked.append(_clone(item, label))
+            while len(picked) < count:
+                picked.append(_clone(random.choice(pool), label, force_new=True))
+        return picked
+
+    items = []
+    items.extend(_take("flashcards", 5, "flash"))
+    items.extend(_take("tradeoffs", 3, "tradeoff"))
+    items.extend(_take("whiteboard", 1, "whiteboard"))
+    items.extend(_take("behavioral", 1, "behavioral"))
+
+    if items:
+        while len(items) < 10:
+            source = random.choice(items)
+            items.append(_clone(source, source["type"], force_new=True))
+        return items
+
+    # Fallback if the seed file is empty
+    placeholder_seed = {
+        "id": "fallback",
+        "front": "Review an AWS architecture you know cold and explain it aloud.",
+        "back": "Outline the goal, core services, data flow, scaling, and failure handling.",
+    }
+    return [_clone(placeholder_seed, "flash", force_new=True) for _ in range(10)]
 
 def ensure_session(profile_code):
     conn = get_db()
@@ -144,7 +180,19 @@ def ensure_session(profile_code):
     cur.execute("SELECT id, items_json, score, completed FROM sessions WHERE profile_code=? AND session_date=?", (profile_code, d))
     row = cur.fetchone()
     if row:
-        return dict(id=row["id"], items_json=row["items_json"], score=row["score"], completed=row["completed"])
+        data = dict(row)
+        try:
+            items = json.loads(data.get("items_json") or "[]")
+        except Exception:
+            items = []
+        if not items:
+            refreshed = sample_daily_items()
+            data["items_json"] = json.dumps(refreshed)
+            data["completed"] = 0
+            data["score"] = 0
+            cur.execute("UPDATE sessions SET items_json=?, completed=0, score=0 WHERE id=?", (data["items_json"], data["id"]))
+            conn.commit()
+        return dict(id=data["id"], items_json=data["items_json"], score=data["score"], completed=data["completed"])
     items = sample_daily_items()
     items_json = json.dumps(items)
     cur.execute("INSERT INTO sessions(profile_code, session_date, items_json, score, completed) VALUES (?, ?, ?, 0, 0)",
